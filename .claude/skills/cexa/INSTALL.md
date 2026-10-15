@@ -1,3 +1,16 @@
+
+## Enterprise TLS certificates
+
+The CLI verifies HTTPS certificates. For networks that use TLS inspection, set a trusted enterprise CA bundle before running it:
+
+```powershell
+$env:SSL_CERT_FILE = 'C:\path\to\corporate-ca-bundle.pem'
+# Or use a directory containing hashed CA certificates:
+$env:SSL_CERT_DIR = 'C:\path\to\corporate-ca-directory'
+cexa --help
+```
+
+Keep certificate verification enabled. The variables are passed through automatically when `cexa` is launched from an MCP host.
 # Installing `cexa`
 
 The `cexa` CLI provides agents and developers with dynamic, token-efficient access to the remote Exa MCP Server (`https://mcp.exa.ai/mcp`).

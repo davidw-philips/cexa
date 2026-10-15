@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import ssl
 import sys
 import urllib.error
 import urllib.request
@@ -20,6 +21,14 @@ from typing import Any
 
 MCP_URL = "https://mcp.exa.ai/mcp"
 USER_AGENT = "Mozilla/5.0 (compatible; cexa/0.1.0; +https://github.com/davidw-philips/cexa)"
+
+
+def ssl_context() -> ssl.SSLContext:
+    """Build a verified TLS context using optional CA environment overrides."""
+    return ssl.create_default_context(
+        cafile=os.environ.get("SSL_CERT_FILE") or None,
+        capath=os.environ.get("SSL_CERT_DIR") or None,
+    )
 
 
 def get_api_key() -> str:
@@ -59,7 +68,7 @@ def rpc_request(method: str, params: dict[str, Any] | None = None, api_key: str 
     )
 
     try:
-        with urllib.request.urlopen(req, timeout=60) as resp:
+        with urllib.request.urlopen(req, timeout=60, context=ssl_context()) as resp:
             raw = resp.read().decode("utf-8")
     except urllib.error.HTTPError as exc:
         body = exc.read().decode("utf-8", errors="replace")
@@ -71,7 +80,10 @@ def rpc_request(method: str, params: dict[str, Any] | None = None, api_key: str 
         sys.stderr.write(f"HTTP Error {exc.code} calling Exa MCP Server: {msg}\n")
         sys.exit(1)
     except urllib.error.URLError as exc:
-        sys.stderr.write(f"Network error connecting to Exa MCP Server: {exc.reason}\n")
+        message = str(exc.reason)
+        if "CERTIFICATE_VERIFY_FAILED" in message:
+            message += " Set SSL_CERT_FILE or SSL_CERT_DIR to a trusted CA bundle."
+        sys.stderr.write(f"Network error connecting to Exa MCP Server: {message}\n")
         sys.exit(1)
     except Exception as exc:
         sys.stderr.write(f"Unexpected error: {exc}\n")
